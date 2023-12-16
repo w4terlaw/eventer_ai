@@ -15,10 +15,5 @@ class UserEvent(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("user.id"))
     event_id: Mapped[int] = mapped_column(ForeignKey("event.id"))
 
-    # user: Mapped["User"] = relationship(back_populates="events_details")
-    # event: Mapped["Event"] = relationship(back_populates="users_details")
-
     def __repr__(self):
-        return (
-            f"UserEvent(id={self.id}, user_id={self.user_id}, event_id={self.event_id})"
-        )
+        return f"UserEvent(id={self.id}, user_id={self.user_id}, event_id={self.event_id})"

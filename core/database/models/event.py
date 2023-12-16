@@ -30,11 +30,7 @@ class Event(Base):
     city: Mapped["City"] = relationship(back_populates="events")
     organization: Mapped["Organization"] = relationship(back_populates="events")
     category: Mapped["Category"] = relationship(back_populates="events")
-    users: Mapped[list["User"]] = relationship(
-        secondary="user_event", back_populates="events"
-    )
-
-    # users_details: Mapped[list["UserEvent"]] = relationship(back_populates="event")
+    users: Mapped[list["User"]] = relationship(secondary="user_event", back_populates="events")
 
     def __repr__(self):
         return f"Event(id={self.id}, title={self.title})"

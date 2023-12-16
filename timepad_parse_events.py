@@ -12,14 +12,12 @@ organizations_ids: dict[int, int] = dict()
 
 
 def parse():
-    cities = get_cities()
 
-    # categories = get_categories()
-
-    for city in cities:
+    for city in get_cities():
         exclude_ids = []
-        count = first_count = \
-            requests.get(Config.TIMEPAD_API_URL.format(params=generate_params(city.name, exclude_ids))).json()["count"]
+        count = first_count = requests.get(
+            Config.TIMEPAD_API_URL.format(params=generate_params(city.name, exclude_ids))
+        ).json()["count"]
         while first_count - count <= 100 and count != 0:
             request = requests.get(Config.TIMEPAD_API_URL.format(params=generate_params(city.name, exclude_ids)))
             response = request.json()
@@ -38,7 +36,7 @@ def parse():
                     rating=event_data["rating"],
                     category_id=event_data["categories"][0],
                     organization_id=organization_id,
-                    city_id=city.id
+                    city_id=city.id,
                 )
 
                 event.save(session)
@@ -51,14 +49,14 @@ def create_organization(data: dict) -> int:
         organization = Organization(
             name=data["name"],
             logo=data["logo"],
-            phone=data["contact_phone"].replace('-', '').replace('(', '').replace(')', '').replace(' ', ''),
+            phone=data["contact_phone"].replace("-", "").replace("(", "").replace(")", "").replace(" ", ""),
         )
         organization.save(session)
         o_id = organizations_ids[data["id"]] = organization.id
     return o_id
 
 
-def generate_params(city_name: str, exclude_ids: list[int]):
+def generate_params(city_name: str, exclude_ids: list[int]) -> str:
     params = f"?city={city_name}"
     for event_id in exclude_ids:
         params += f"&excludeIds[]={event_id}"
@@ -73,5 +71,5 @@ def get_cities() -> list[City]:
     return session.query(City).all()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parse()
