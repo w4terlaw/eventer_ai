@@ -2,8 +2,6 @@
 __pycache__
 venv
 .env
-*.sqlite
-*.sqlite3
 /migrations
 /logs
 alembic.ini

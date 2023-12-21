@@ -1,6 +1,7 @@
+import asyncio
 from datetime import datetime
 
-import requests
+import aiohttp
 
 from config import Config
 from core import get_session
@@ -11,21 +12,15 @@ session = get_session()
 organizations_ids: dict[int, int] = dict()
 
 
-def parse():
-
-    for city in get_cities():
-        exclude_ids = []
-        count = first_count = requests.get(
-            Config.TIMEPAD_API_URL.format(params=generate_params(city.name, exclude_ids))
-        ).json()["count"]
-        while first_count - count <= 100 and count != 0:
-            request = requests.get(Config.TIMEPAD_API_URL.format(params=generate_params(city.name, exclude_ids)))
-            response = request.json()
-            count = response["count"]
-            events = response["list"]
-
+async def parse_city(city):
+    exclude_ids = []
+    count = await get_event_count(city, exclude_ids)
+    # first_count = count
+    try:
+        while count != 0:
+            events, count = await get_events(city, exclude_ids)
             for event_data in events:
-                organization_id = create_organization(event_data["organization"])
+                organization_id = await create_organization(event_data["organization"])
 
                 event = Event(
                     title=event_data["title"],
@@ -41,9 +36,26 @@ def parse():
 
                 event.save(session)
                 exclude_ids.append(event_data["id"])
+            print(count)
+    except Exception as e:
+        print(e)
 
 
-def create_organization(data: dict) -> int:
+async def get_event_count(city, exclude_ids):
+    async with aiohttp.ClientSession() as session:
+        response = await session.get(Config.TIMEPAD_API_URL.format(params=generate_params(city.name, exclude_ids)))
+        data = await response.json()
+        return data["count"]
+
+
+async def get_events(city, exclude_ids):
+    async with aiohttp.ClientSession() as session:
+        response = await session.get(Config.TIMEPAD_API_URL.format(params=generate_params(city.name, exclude_ids)))
+        data = await response.json()
+        return data["list"], data['count']
+
+
+async def create_organization(data):
     o_id = organizations_ids.get(data["id"])
     if o_id is None:
         organization = Organization(
@@ -56,20 +68,26 @@ def create_organization(data: dict) -> int:
     return o_id
 
 
-def generate_params(city_name: str, exclude_ids: list[int]) -> str:
+def generate_params(city_name, exclude_ids):
     params = f"?city={city_name}"
     for event_id in exclude_ids:
         params += f"&excludeIds[]={event_id}"
     return params
 
 
-def get_categories() -> list[tuple[int]]:
+def get_categories():
     return session.query(Category.id).all()
 
 
-def get_cities() -> list[City]:
+def get_cities():
     return session.query(City).all()
 
 
+async def main():
+    cities = get_cities()
+    tasks = [parse_city(city) for city in cities]
+    await asyncio.gather(*tasks)
+
+
 if __name__ == "__main__":
-    parse()
+    asyncio.run(main())
